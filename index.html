@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+xmlns:og="http://ogp.me/ns#" xmlns:fb="http://www.facebook.com/2008/fbml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/style1.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?language=zh-TW&key=AIzaSyALElAbcPdp47CszdlGTMO97QjIB5J1QGc"></script>
+  <title>停車Easy Go</title>
+  <link rel="shortcut icon" href="pic/favicon_pic.ico">
+  <meta property="og:title" content="停車EASY GO"></meta>
+  <meta property="og:description" content="用簡短的時間，找到您最理想的停車位"></meta>
+  <meta property="og:url" content="http://hobbyling.github.io/web/finalterm/"></meta>
+  <meta property="og:image" content="http://hobbyling.github.io/web/finalterm/pic/parkingeasygo.jpg"/></meta>
+  <script>
+  var map;
+  var parkData;
+  var markers;
+  var geocoder = new google.maps.Geocoder();
+  var infoWindow = new google.maps.InfoWindow();
+  var searchMarker = new google.maps.Marker();
+  var geolocMarker = new google.maps.Marker({
+    icon: {
+      url: 'https://chadkillingsworth.github.io/geolocation-marker/images/gpsloc.png',
+      size: new google.maps.Size(34, 34),
+      scaledSize: new google.maps.Size(17, 17),
+      origin: new google.maps.Point(0, 0),
+      anchor: new google.maps.Point(8, 8)
+    }
+  });
+
+  // 讀取 open data
+  function loadData() {
+    $.ajax({
+      type: 'GET',
+      url: 'https://xml2json.newsfeed.tw/?url=http%3A%2F%2Fxml11.kctmc.nat.gov.tw%3A8080%2Fxmldata%2FParking.xml',
+      success: function(data) {
+        parkData = data.NewDataSet.Data;
+        $.event.trigger({
+          type: "parkData",
+          message: parkData
+        });
+      },
+      fail: function() {
+        alert('Cannot get data!');
+      }
+    });
+  }
+
+  // 初始化 Google Maps
+  function initMap() {
+    map = new google.maps.Map(document.querySelector('.map'), {
+      zoom: 13,
+      center: {
+        lat: 22.627246,
+        lng: 120.301458
+      }
+    });
+
+    google.maps.event.addDomListener(window, 'resize', function() {
+      var center = map.getCenter();
+      google.maps.event.trigger(map, 'resize');
+      map.setCenter(center);
+    });
+
+    getUserLocation();
+  }
+
+  // 取得使用者現在位置，並加到地圖上
+  function getUserLocation() {
+    navigator.geolocation.getCurrentPosition(function(loc) {
+      var position = new google.maps.LatLng(loc.coords.latitude, loc.coords.longitude);
+      map.panTo(position);
+      geolocMarker.setPosition(position);
+      geolocMarker.setMap(map);
+      map.setZoom(16);
+    });
+  }
+
+  // 把資料標記在地圖上
+  function addMarkers(dataList) {
+    clearMarkers();
+
+    // 為清單中每筆資料建立 marker，和點擊後的動作
+    dataList.forEach(function(d) {
+
+      // marker 是地圖上的一個標誌
+      var marker = new google.maps.Marker({
+        //icon: 'https://maps.google.com/mapfiles/kml/shapes/parking_lot_maps.png',
+        icon: 'pic/favicon_pic.png',
+        position: {
+          lat: d.N,
+          lng: d.E
+        },
+        map: map,
+        title: d.name
+      });
+
+      marker.addListener('click', function() {
+        infoWindow.setContent('<div class="mapInfo">' +
+          '<h2>' + d.NAME + '</h2>' +
+          '<table>' +
+          '<tr><td>區域</td><td>' + d.AREA + '</td></tr>' +
+          '<tr><td>位址</td><td>' + d.ADDR + '</td></tr>' +
+          (d.PRICE.length ? ('<tr><td>價格</td><td>' + d.PRICE + '</td></tr>') : '') +
+          '<tr><td>車位</td><td>' + d.CAR_NUM + ' 個</td></tr>' +
+          '</table>' +
+          '</div>');
+
+        infoWindow.open(map, marker);
+      });
+
+      markers.push(marker);
+    });
+  }
+
+  // 清除標記
+  function clearMarkers() {
+    if (markers && markers.length) {
+      markers.forEach(function(m) {
+        m.setMap(null);
+      });
+    }
+    markers = [];
+  }
+
+  // 按下搜尋，若資料尚未讀取完成，則等待資料讀取完成再執行
+  function doSearch() {
+    function searchAction() {
+      var area = $('select[name="Location"]').val();
+      if (area !== 'null') {
+        // 搜尋區域名稱，若得到座標則標記在地圖上
+        geocoder.geocode({
+          'address': '高雄市' + area
+        }, function(results, status) {
+          if (status === google.maps.GeocoderStatus.OK) {
+            map.setCenter(results[0].geometry.location);
+            searchMarker.setMap(map);
+            searchMarker.setPosition(results[0].geometry.location);
+            infoWindow.setContent(area);
+            infoWindow.open(map, searchMarker);
+            map.setZoom(13);
+          }
+          addMarkers(filterByPrice(filterByLocation(parkData)));
+        });
+      } else {
+        searchMarker.setMap(null);
+        infoWindow.close();
+        addMarkers(filterByPrice(filterByLocation(parkData)));
+      }
+    }
+
+    if (parkData) {
+      searchAction();
+    } else {
+      $(document).one('parkData', searchAction);
+    }
+
+    return false;
+  }
+
+  // 依行政區篩選
+  function filterByLocation(data) {
+    var area = $('select[name="Location"]').val();
+    if (area !== 'null') {
+      return data.filter(function(d) {
+        return d.AREA === area;
+      });
+    }
+    return data;
+  }
+
+  // 依價格篩選
+  function filterByPrice(data) {
+    var price = $('select[name="Money"]').val();
+    if (price !== 'null') {
+      return data.filter(function(d) {
+        if (!d.PRICE.length) {
+          return false;
+        }
+        switch (price) {
+          case 'free':
+            return d.PRICE.indexOf('不收') !== -1;
+          case 'hour':
+            return d.PRICE.indexOf('小時') !== -1;
+          case 'times':
+            return d.PRICE.indexOf('次') !== -1;
+          default:
+            return true;
+        }
+      });
+    }
+    return data;
+  }
+
+  // 讀取資料
+  loadData();
+  // 資源讀取完成後，開始初始化
+  google.maps.event.addDomListener(window, 'load', initMap);
+  // 第一次讀取資料完成，繪製標記在地圖上
+  $(document).one('parkData', function() {
+    addMarkers(parkData);
+  });
+  </script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <a href="index.html"><h1>停車<br>EASY GO</h1></a>
+      <p>用簡短的時間，找到您最理想的停車位</p>
+    </div>
+    <div class="search">
+      <!--<span> 條件篩選 </span> -->
+      <form onsubmit="return doSearch()">
+        <select name="Location" class="form">
+          <option value="null">行政區</option>
+          <option value="楠梓區">楠梓區</option>
+          <option value="左營區">左營區</option>
+          <option value="鼓山區">鼓山區</option>
+          <option value="鹽埕區">鹽埕區</option>
+          <option value="三民區">三民區</option>
+          <option value="新興區">新興區</option>
+          <option value="前金區">前金區</option>
+          <option value="苓雅區">苓雅區</option>
+          <option value="前鎮區">前鎮區</option>
+          <option value="小港區">小港區</option>
+          <option value="旗津區">旗津區</option>
+        </select>&nbsp;&nbsp;&nbsp;
+        <select name="Money" class="form">
+          <option value="null">收費方式</option>
+          <option value="free">免費</option>
+          <option value="hour">計時計費</option>
+          <option value="times">計次計費</option>
+        </select>&nbsp;&nbsp;&nbsp;
+        <input id="button" type="submit" value="搜尋">
+      </form>
+      </br>
+    </div>
+    <div id="googleMap" class="map"></div>
+    <div class="footer">
+      <a href="team.html">Copyright © 2016 NUKIM Enya & Hobby All rights reserved</a></br>
+      Open data source：<a href="https://data.kaohsiung.gov.tw/Opendata/DetailList.aspx?CaseNo1=AP&CaseNo2=12&Lang=C">Open Data.Kaohsiung 停車場格位資訊</a>
+    </div>
+  </div>
+</body>
+
+</html>

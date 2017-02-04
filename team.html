@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+xmlns:og="http://ogp.me/ns#" xmlns:fb="http://www.facebook.com/2008/fbml">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="shortcut icon" href="pic/favicon_pic.ico">
+	<link rel="stylesheet" href="css/style1.css">
+	<script src="http://libs.useso.com/js/jquery/2.1.1/jquery.min.js" type="text/javascript"></script>
+	<script src="js/jquery-2.2.3.min.js"></script>
+	<script src="js/ns.hover.min.js"></script>
+
+	<title>停車Easy Go</title>
+	<meta property="og:title" content="停車EASY GO"></meta>
+	<meta property="og:description" content="用簡短的時間，找到您最理想的停車位"></meta>
+	<meta property="og:url" content="網址"></meta>
+	<meta property="og:image" content="pic/parkingeasygo.jpg"></meta>
+</head>
+<body>
+	<div class="wrap">
+		<div class="header">
+			<a href="index.html"><h1>Team Members</h1></a>
+			<p>此網站由國立高雄大學<br>資管系學生所建置</p>
+		</div>
+
+		<ul class="team_member">
+			<li id="enya"><img src="pic/member_enya.jpg"></li>
+			<li id="hobby"><img src="pic/member_hobby.jpg"></li>
+		</ul>
+		<div class="clear"></div>
+	
+	<script> 
+		window.onload = function(){ //為了讓網頁一開始就讀取到，所以寫在這裡
+			$.noConflict();
+			jQuery(document).ready(function($){
+				$('#enya').nsHover({
+					rounded: 'circle',  //控制圖片的圓角
+					scaling: 0.9,       //滑鼠滑過時的收縮
+		            bgcolor: '#000',    //遮罩層的背景色
+		            bganim : 'fade',    //遮罩層背景動畫的類型 fade / scale / slide
+		            bgsize: '20%',      //遮罩層背景圖片的大小0% - 100%
+		            content: '<div class="content"><h1>蘇宛儀</h1></div>'   //遮罩層上顯示的文字內容
+				});
+
+				$('#hobby').nsHover({
+					rounded: 'circle',
+					scaling: 0.9,
+		            bgcolor: '#000',
+		            bganim : 'fade',
+		            bgsize: '20%',
+		            bgpic: '',
+		            content: '<div class="content"><h1>李姿陵</h1></div>'
+				});
+			});
+		}
+	</script>
+
+		<div class="footer">
+			<a href="team.html">Copyright © 2016 NUKIM Enya & Hobby All rights reserved</a></br>
+			Open data source：<a href="http://data.kaohsiung.gov.tw/Opendata/DetailList.aspx?CaseNo1=AP&CaseNo2=12&Lang=C">Open Data.Kaohsiung 停車場格位資訊</a>
+		</div>
+	</div>
+	
+</body>
+</html>
